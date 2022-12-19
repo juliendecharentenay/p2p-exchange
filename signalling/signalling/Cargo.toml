@@ -1,0 +1,25 @@
+[package]
+name = "signalling"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+log        = "0.4"
+derive-sql = "0.2.1"
+actix-web  = { version = "4", optional = true }
+rusqlite   = { version = "0.28", features = [ "bundled" ] }
+# env_logger = "0.9"
+serde      = { version = "1", features = [ "derive" ] }
+serde_json = "1"
+rand       = "0.8"
+derive_builder = "0.11"
+lambda_http = { version = "0.7", optional = true }
+regex       = { version = "1", optional = true }
+urlencoding = { version = "2", optional = true }
+query_map   = { version = "0.6", optional = true }
+
+[features]
+actix  = [ "actix-web" ]
+lambda = [ "lambda_http", "regex", "urlencoding", "query_map" ]

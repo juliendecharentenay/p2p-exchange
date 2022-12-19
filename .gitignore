@@ -1,0 +1,23 @@
+# Setup
+prod.hcl
+prod.tfvars
+
+## Terraform
+.terraform
+.terraform.lock.hcl
+
+## VueJS
+.DS_Store
+node_modules
+dist
+package-lock.json
+
+## Rust
+target
+Cargo.lock
+test.db3
+
+# Other
+SS
+*.ignore
+
