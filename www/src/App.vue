@@ -150,6 +150,7 @@ export default {
     },
     on_error: function(message, error) {
       if (this.error === null) {
+        console.error("error:",message, error);
         this.error = { error, message };
       }
     }
