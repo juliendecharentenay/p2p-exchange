@@ -22,9 +22,9 @@ async fn handle(event: lambda_http::Request) -> Result<lambda_http::Response<Str
 
 async fn handler(event: lambda_http::Request) -> Result<lambda_http::Response<String>, Box<dyn std::error::Error>> {
   if let lambda_http::request::RequestContext::ApiGatewayV1(context) = event.request_context() {
-    log::info!("Request context: {:#?}", context);
+    log::debug!("Request context: {:#?}", context);
+    log::debug!("Query string: {:#?}", event.query_string_parameters());
     let app_state = signalling::AppStateBuilder::default().filename(r"/mnt/efs/signalling.db3".to_string()).build()?;
-    // let app_state = signalling::AppStateBuilder::default().filename(r"/tmp/signalling.db3".to_string()).build()?;
     let path = context.resource_path.as_ref().ok_or("Unable to retrieve resource path")?;
 
     if regex::Regex::new(r"^/api/offer")?.is_match(path) {

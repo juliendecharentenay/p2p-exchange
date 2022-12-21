@@ -77,7 +77,7 @@ class SignalingChannel {
             }
           })
           .then((e) => {if (e.length > 0) { this.peer_id = e[0].id;}})
-          .catch(this.on_error);
+          .catch((e) => { this.stop(); this.on_error(e); });
 
         } else {
           // Looking for peer messages
@@ -90,7 +90,7 @@ class SignalingChannel {
               }
             });
           })
-          .catch(this.on_error);
+          .catch((e) => { this.stop(); this.on_error(e); });
 
         }
       },
@@ -128,7 +128,10 @@ class Connection {
         this.signaler.send({ description: this.connection.localDescription });
         making_offer = false;
       })
-      .catch(this.on_error);
+      .catch((e) => {
+        this.signaler.stop();
+        this.on_error(e);
+      });
     };
 
     this.connection.onicecandidate = ({candidate}) => { this.signaler.send({candidate}); };
@@ -158,6 +161,7 @@ class Connection {
           }
         }
       } catch (e) {
+        this.signaler.stop();
         this.on_error(e);
       }
     });

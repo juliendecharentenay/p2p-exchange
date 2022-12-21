@@ -73,57 +73,70 @@ locals {
     { 
       http_method = "GET"
       resource_id = aws_api_gateway_resource.api_answer.id
+      request_parameters = { "method.request.querystring.offer_id" = true }
     },
     { 
       http_method = "POST"
       resource_id = aws_api_gateway_resource.api_answer.id
+      request_parameters = {}
     },
     { 
       http_method = "GET"
       resource_id = aws_api_gateway_resource.api_answer_key.id
+      request_parameters = {}
     },
     { 
       http_method = "PUT"
       resource_id = aws_api_gateway_resource.api_answer_key.id
+      request_parameters = {}
     },
     { 
       http_method = "DELETE"
       resource_id = aws_api_gateway_resource.api_answer_key.id
+      request_parameters = {}
     },
 
     { 
       http_method = "GET"
       resource_id = aws_api_gateway_resource.api_message.id
+      request_parameters = {"method.request.querystring.originator_id" = true}
     },
     { 
       http_method = "POST"
       resource_id = aws_api_gateway_resource.api_message.id
+      request_parameters = {}
     },
 
     {
       http_method = "GET"
       resource_id = aws_api_gateway_resource.api_offer.id
+      request_parameters = {}
     },
     {
       http_method = "POST"
       resource_id = aws_api_gateway_resource.api_offer.id
+      request_parameters = {}
     },
     {
       http_method = "GET"
       resource_id = aws_api_gateway_resource.api_offer_key.id
+      request_parameters = {}
     },
     {
       http_method = "PUT"
       resource_id = aws_api_gateway_resource.api_offer_key.id
+      request_parameters = {}
     },
     {
       http_method = "DELETE"
       resource_id = aws_api_gateway_resource.api_offer_key.id
+      request_parameters = {}
     },
 
     { 
       http_method = "GET"
       resource_id = aws_api_gateway_resource.api_health.id
+      request_parameters = {}
     }
   ]
 }
@@ -134,6 +147,7 @@ resource "aws_api_gateway_method" "methods" {
   resource_id   = each.value.resource_id
   http_method   = each.value.http_method
   authorization = "NONE"
+  request_parameters = each.value.request_parameters
 }
 resource "aws_api_gateway_integration" "integrations" {
   for_each     = aws_api_gateway_method.methods

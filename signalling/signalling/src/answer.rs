@@ -53,7 +53,7 @@ pub mod apigw {
 
   pub async fn handler(request: Request, app_state: AppState) -> Result<lambda_http::Response<String>, Box<dyn std::error::Error>> {
     match request {
-      Request::List { query } => list(app_state, query.into()).await,
+      Request::List { query } => list(app_state, Info::from(query)).await,
       Request::Post { body } => post(app_state, body).await,
       Request::Get { key } => get(app_state, key).await,
       Request::Update { key, body } => update(app_state, key, body).await,
