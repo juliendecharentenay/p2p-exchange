@@ -44,8 +44,11 @@
          class="font-medium text-indigo-600 hover:text-indigo-500"
          >Home</a>
     </div>
-    <div class="absolute bottom-1 left-1 text-xs text-gray-600">
+    <div class="absolute bottom-1 left-1 text-xs text-gray-600" v-if="logs.length == 0">
       Copyright (C) 2022, Julien de Charentenay
+    </div>
+    <div class="absolute bottom-1 right-1 text-xs text-gray-600">
+      <div v-for="(line, i) in logs.slice(-10)" :key="i">{{ line }}</div>
     </div>
 
     <ErrorComponent
@@ -92,6 +95,7 @@ export default {
       connection: null,
       name: '',
       messages: [],
+      logs: [],
     };
   },
   computed: {
@@ -121,6 +125,7 @@ export default {
     start: function(config) {
       try {
         this.connection = new Connection(config);
+        if (new URL(window.location.href).searchParams.get("log") !== null) {this.connection.set_log((l) => {this.logs.push(l);});}
         this.connection.start();
       } catch (e) {
         this.on_error("Error when starting connection", e);

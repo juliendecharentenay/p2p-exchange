@@ -17,7 +17,6 @@ class SignalingChannel {
 
   send(data) { 
     return new Promise((resolve, reject) => {
-      console.log("Sending data", data, this); 
       if (this.ready === 0) {
         this.ready = 1;
         const fargs = (this.peer_id === null
@@ -29,7 +28,7 @@ class SignalingChannel {
                 return r.json();
               })
               .then((r) => {
-                this.id = r.id; this.polite = r.polite; this.ready = 2; console.log("is ready:", this);
+                this.id = r.id; this.polite = r.polite; this.ready = 2;
                 this.listen();
                 if (this.on_ready !== null) { this.on_ready(); }
               })
@@ -50,12 +49,15 @@ class SignalingChannel {
           method: 'POST',
           body: JSON.stringify({originator_id: this.id, message: JSON.stringify(data)}),
         })
-        .then((r) => r.json())
+        .then((r) => {
+          if (! r.ok) { throw new Error(`Error when sending data to api. Status ${r.statusText} [${r.status}]`); }
+          return r.json();
+        })
         .then(resolve)
         .catch(reject);
         break;
       case -1:
-        console.error("Connection to signaling server failed...");
+        throw new Error("Connection to signaling server failed...");
         break;
       default:
         throw new Error(`Ready status ${this.ready} is not supported`);
@@ -64,19 +66,19 @@ class SignalingChannel {
 
   listen() {
     this.listen_interval = setInterval(() => {
-        console.log("Listening...", this);
         if (this.peer_id === null) {
           // Looking for peer response
           fetch('/api/answer?' + new URLSearchParams({offer_id: this.id}))
           .then((r) => {
-            console.log("Response: ", r);
             if (r.ok) {
               return r.json();
             } else {
               return [];
             }
           })
-          .then((e) => {if (e.length > 0) { this.peer_id = e[0].id;}})
+          .then((e) => {
+            if (e.length > 0) { this.peer_id = e[0].id;}
+          })
           .catch((e) => { this.stop(); this.on_error(e); });
 
         } else {
@@ -107,26 +109,31 @@ class SignalingChannel {
 
 class Connection {
   constructor(config) {
+    this.send_icecandidates = false;
+    this.icecandidates = [];
+
     this.on_error = ('on_error' in config ? config.on_error : (e) => {console.error(e);});
     this.on_connected = ('on_connected' in config ? config.on_connected : () => {console.log('connected...');});
     this.on_message = ('on_message' in config ? config.on_message: (m) => {console.log(`Received message ${m}`);});
+    this.p_log = ('log' in config ? config.log : (l) => {console.log(l);});
     this.signaler = new SignalingChannel(config.name, this.on_error, ('id' in config ? config.id : null))
-          .set_on_ready('on_ready' in config ? config.on_ready : () => {console.log("Signaling channel is ready;");});
+          .set_on_ready('on_ready' in config ? config.on_ready : () => {this.log("Signaling channel is ready;");});
 
     this.connection = new RTCPeerConnection({
       iceServers: [{ urls: "stun:stun.services.mozilla.com:3478"}],
     });
     this.channel = null;
     this.channel_status = 0;
-    this.connection.ondatachannel = (evt) => { this.set_channel(evt.channel); };
+    this.connection.ondatachannel = (evt) => { this.log(`ondatachannel: ${JSON.stringify(evt)}`); this.set_channel(evt.channel); };
 
     let making_offer = false;
     this.connection.onnegotiationneeded = () => {
       making_offer = true;
       this.connection.setLocalDescription()
       .then(() => {
-        this.signaler.send({ description: this.connection.localDescription });
+        this.log(`localDescription: ${JSON.stringify(this.connection.localDescription)}`);
         making_offer = false;
+        return this.signaler.send({ description: this.connection.localDescription });
       })
       .catch((e) => {
         this.signaler.stop();
@@ -134,24 +141,35 @@ class Connection {
       });
     };
 
-    this.connection.onicecandidate = ({candidate}) => { this.signaler.send({candidate}); };
+    this.connection.onicecandidate = ({candidate}) => { 
+      this.log(`Candidate: ${JSON.stringify(candidate)}`); 
+      if (this.send_icecandidates) {
+        this.signaler.send({candidate}).catch((e) => {this.signaler.stop(); this.on_error(e);}); 
+      } else {
+        this.icecandidates.push(candidate);
+      }
+    };
 
     let ignore_offer = false;
     let messages = {};
     this.signaler.set_on_message(async (id, { description, candidate }) => {
       try {
         if (! (id in messages)) {
+          this.log(`on_message ${id}: ${JSON.stringify(description)} and ${JSON.stringify(candidate)}`);
           messages[id] = true;
           if (description) {
             const offer_collision = (description.type === "offer" && (making_offer || this.connection.signalingState !== "stable"));
             ignore_offer = !this.signaler.is_polite() && offer_collision;
-            if (ignore_offer) { return; }
+            if (ignore_offer) { this.icecandidates = []; return; }
 
             await this.connection.setRemoteDescription(description);
             if (description.type === "offer") {
               await this.connection.setLocalDescription();
-              this.signaler.send({ description: this.connection.localDescription });
+              this.signaler.send({ description: this.connection.localDescription }).catch((e) => {this.signaler.stop(); this.on_error(e);});
             }
+            this.icecandidates.forEach((candidate) => { this.signaler.send({candidate}).catch((e) => {this.signaler.stop(); this.on_error(e);}); });
+            this.send_icecandidates = true;
+
           } else if (candidate) {
             try {
               await this.connection.addIceCandidate(candidate);
@@ -170,18 +188,30 @@ class Connection {
 
   set_channel(channel) {
     this.channel = channel;
-    this.channel.onopen = () => { this.signaler.stop(); console.log("Channel is open. Signaler stopped!"); this.on_connected(); };
-    this.channel.onclose = () => { console.log("Channel is closed"); };
+    this.channel.onopen = () => { this.signaler.stop(); this.log("Channel is open. Signaler stopped!"); this.on_connected(); };
+    this.channel.onclose = () => { this.log("Channel is closed"); };
     this.channel.onmessage = (evt) => { this.on_message(evt.data); };
+    return this;
+  }
+
+  log(message) {
+    if (this.p_log !== null) { this.p_log(message); }
+  }
+
+  set_log(cb) {
+    this.p_log = cb;
+    return this;
   }
 
   start() {
     this.set_channel(this.connection.createDataChannel("sendChannel"));
+    return this;
   }
 
   close() {
     this.channel.close();
     this.connection.close();
+    return this;
   }
 
   send(message) {
