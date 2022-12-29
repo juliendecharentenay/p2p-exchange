@@ -49,7 +49,6 @@ export default {
   methods: {
     send: function() {
       try {
-console.log("Send ", this.message);
         this.$emit('send', this.message);
         this.message = '';
       } catch (e) {
