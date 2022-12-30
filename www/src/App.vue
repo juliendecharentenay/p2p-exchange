@@ -5,14 +5,14 @@
          @processing="(e) => {processing = e;}"
          @error="(e) => {error = e;}"
          @to="(e) => {page = e;}" 
-         @start="() => {start_offer();}" />
+         @start="() => {start();}" />
 
     <!-- Handling responding to an offer and making an answer -->
     <OfferPage v-if="page === 'offer'"
          @processing="(e) => {processing = e;}"
          @error="(e) => {error = e;}"
          @to="(e) => {page = e;}" 
-         @start="(evt) => {start_answer(evt.id);}" />
+         @start="(evt) => {start(evt.id);}" />
     <WaitAnswerAcceptPage v-if="page === 'wait_answer_accept'"
          @processing="(e) => {processing = e;}"
          @error="(e) => {error = e;}"
@@ -21,10 +21,6 @@
     <!-- Handling making offer and accepting answer -->
     <OfferReadyPage v-if="page === 'offer_ready'"
          :offer_id="get_connection_id()"
-         @processing="(e) => {processing = e;}"
-         @error="(e) => {error = e;}"
-         @to="(e) => {page = e;}" />
-    <AcceptAnswerPage v-if="page === 'accept_answer'"
          @processing="(e) => {processing = e;}"
          @error="(e) => {error = e;}"
          @to="(e) => {page = e;}" />
@@ -64,7 +60,6 @@
 </template>
 
 <script>
-import AcceptAnswerPage from "@/pages/acceptanswerpage.vue";
 import ConnectedPage from "@/pages/connectedpage.vue";
 import HomePage from "@/pages/homepage.vue";
 import OfferPage from "@/pages/offerpage.vue";
@@ -73,12 +68,12 @@ import WaitAnswerAcceptPage from "@/pages/waitansweracceptpage.vue";
 import ErrorComponent from "@/components/errorcomponent.vue";
 import ProcessingComponent from "@/components/processingcomponent.vue";
 
-import { Connection } from "@/lib/connection.js";
+import { ConnectionBuilder } from "@/lib/connectionbuilder.js";
+import * as Connection from "@/lib/connection.js";
 
 export default {
   name: 'App',
   components: {
-    AcceptAnswerPage,
     ConnectedPage,
     HomePage,
     OfferPage,
@@ -98,42 +93,52 @@ export default {
       logs: [],
     };
   },
-  computed: {
+  beforeUnmount: function() {
+    try {
+      this.stop();
+    } catch (e) {
+      this.on_error("Error in beforeUnmount", e);
+    }
   },
   methods: {
     get_connection_id: function() {
-      return this.connection.get_id();
+      return this.connection.id();
     },
-    start_answer: function(id) {
-      this.start({ 
-           name: this.name, id,
-           on_error: (e) => {this.on_error("Error in connection", e);},
-           on_ready: ()  => {this.page = 'wait_answer_accept';},
-           on_connected: () => {this.page = 'connected';},
-           on_message: this.on_message,
-      });
-    },
-    start_offer: function() {
-      this.start({
-           name: this.name,
-           on_error: (e) => {this.on_error("Error in connection", e);},
-           on_ready: ()  => {this.page = 'offer_ready';},
-           on_connected: () => {this.page = 'connected';},
-           on_message: this.on_message,
-      });
-    },
-    start: function(config) {
+    start: function(id = null) {
       try {
-        this.connection = new Connection(config);
+        const is_offer = (id === null);
+        this.connection = (is_offer ? ConnectionBuilder.offer() : ConnectionBuilder.answer(id))
+          .on_status_changed((s) => {
+            try {
+              switch (s) {
+                case Connection.READY: 
+                  this.page = (is_offer ? 'offer_ready' : 'wait_answer_accept');
+                  break;
+                case Connection.CONNECTED:
+                  this.page = 'connected';
+                  break;
+                case Connection.CLOSED:
+                  this.stop();
+                  this.page = 'home';
+                  break;
+                default:
+                  console.warn(`State ${s} is not supported`);
+              }
+            } catch (e) {
+              this.on_error("Error in on_status_changed", e);
+            }
+          })
+          .on_error((e) => {this.on_error("Error in connection", e); })
+          .on_message(this.on_message)
+          .make();
         if (new URL(window.location.href).searchParams.get("log") !== null) {this.connection.set_log((l) => {this.logs.push(l);});}
-        this.connection.start();
       } catch (e) {
         this.on_error("Error when starting connection", e);
       }
     },
     stop: function() {
       try {
-        this.connection.close();
+        if (this.connection !== null) { this.connection.close(); }
       } catch (e) {
         this.on_error("Error when stoping connection", e);
       }

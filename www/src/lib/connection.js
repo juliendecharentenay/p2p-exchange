@@ -1,102 +1,120 @@
+const { SignalingChannel } = require ('./signalingchannel.js');
+
+const READY = "ready";
+const CONNECTED = "connected";
+const CLOSED = "close";
+
 class Connection {
-  constructor(config) {
-    this.send_icecandidates = false;
-    this.icecandidates = [];
+  constructor(peer_id, on_error, on_status_changed, on_message) {
+    // Assign callbacks
+    this.on_error = on_error;
+    this.on_status_changed = on_status_changed;
+    this.on_message = on_message;
 
-    this.on_error = ('on_error' in config ? config.on_error : (e) => {console.error(e);});
-    this.on_connected = ('on_connected' in config ? config.on_connected : () => {console.log('connected...');});
-    this.on_message = ('on_message' in config ? config.on_message: (m) => {console.log(`Received message ${m}`);});
-    this.p_log = ('log' in config ? config.log : (l) => {console.log(l);});
-    this.signaler = new SignalingChannel(config.name, this.on_error, ('id' in config ? config.id : null))
-          .set_on_ready('on_ready' in config ? config.on_ready : () => {this.log("Signaling channel is ready;");});
+    // Handle log
+    this.p_log = (e) => { console.log(e); };
 
+    // Internal variables
+    this.channel = null;
+
+    // Declare peer connection
     this.connection = new RTCPeerConnection({
       iceServers: [{ urls: "stun:stun.services.mozilla.com:3478"}],
     });
-    this.channel = null;
-    this.channel_status = 0;
-    this.connection.ondatachannel = (evt) => { this.log(`ondatachannel: ${JSON.stringify(evt)}`); this.set_channel(evt.channel); };
 
+    // Declare signaling channel
+    this.signaler = new SignalingChannel(this.on_error, peer_id)
+          .on_ready(() => {this.on_status_changed(READY);});
+
+    /**********************************************************
+     * Peer connection process
+     */
     let making_offer = false;
-    this.connection.onnegotiationneeded = () => {
-      making_offer = true;
-      this.connection.setLocalDescription()
-      .then(() => {
-        this.log(`localDescription: ${JSON.stringify(this.connection.localDescription)}`);
-        making_offer = false;
-        return this.signaler.send({ description: this.connection.localDescription });
-      })
-      .catch((e) => {
-        this.signaler.stop();
-        this.on_error(e);
-      });
-    };
+    let send_icecandidates = false;
+    let icecandidates = [];
 
-    this.connection.onicecandidate = ({candidate}) => { 
-      this.log(`Candidate: ${JSON.stringify(candidate)}`); 
-      if (this.send_icecandidates) {
-        this.signaler.send({candidate}).catch((e) => {this.signaler.stop(); this.on_error(e);}); 
-      } else {
-        this.icecandidates.push(candidate);
-      }
-    };
-
-    let ignore_offer = false;
-    let messages = {};
-    this.signaler.set_on_message(async (id, { description, candidate }) => {
+    // Perfect negotiation pattern 
+    // see https://developer.mozilla.org/en-US/docs/Web/API/WebRTC_API/Perfect_negotiation
+    this.signaler.on_message(async ({ description, candidate }) => {
       try {
-        if (! (id in messages)) {
-          this.log(`on_message ${id}: ${JSON.stringify(description)} and ${JSON.stringify(candidate)}`);
-          messages[id] = true;
-          if (description) {
-            const offer_collision = (description.type === "offer" && (making_offer || this.connection.signalingState !== "stable"));
-            ignore_offer = !this.signaler.is_polite() && offer_collision;
-            if (ignore_offer) { this.icecandidates = []; return; }
+        if (description) {
+          this.log(`Received description: ${description}`);
+          const offer_collision = (description.type === "offer" && (making_offer || this.connection.signalingState !== "stable"));
+          const ignore_offer = !this.signaler.is_polite() && offer_collision;
+          if (ignore_offer) { icecandidates = []; return; }
 
-            await this.connection.setRemoteDescription(description);
-            if (description.type === "offer") {
-              await this.connection.setLocalDescription();
-              this.signaler.send({ description: this.connection.localDescription }).catch((e) => {this.signaler.stop(); this.on_error(e);});
-            }
-            this.icecandidates.forEach((candidate) => { this.signaler.send({candidate}).catch((e) => {this.signaler.stop(); this.on_error(e);}); });
-            this.send_icecandidates = true;
-
-          } else if (candidate) {
-            try {
-              await this.connection.addIceCandidate(candidate);
-            } catch(e) {
-              if (!ignore_offer) { throw e; }
-            }
+          send_icecandidates = true;
+          await this.connection.setRemoteDescription(description);
+          if (description.type === "offer") {
+            await this.connection.setLocalDescription();
+            this.signaler.send({ description: this.connection.localDescription }).catch(this.handle_error);
           }
+          icecandidates.forEach((candidate) => { this.signaler.send({candidate}).catch(this.handle_error);});
+
+        } else if (candidate) {
+          this.log(`Received candidate: ${candidate}`);
+          await this.connection.addIceCandidate(candidate);
         }
       } catch (e) {
-        this.signaler.stop();
-        this.on_error(e);
+        this.handle_error(e);
       }
     });
 
+    // Configure peer connection
+    this.connection.ondatachannel = (evt) => { this.set_channel(evt.channel); };
+    this.connection.onnegotiationneeded = () => {
+      this.log("Connection: onnegotiationneeded");
+      making_offer = true;
+      this.connection.setLocalDescription()
+      .then(() => {
+        making_offer = false;
+        return this.signaler.send({ description: this.connection.localDescription });
+      })
+      .catch(this.handle_error);
+    };
+    this.connection.onicecandidate = ({candidate}) => { 
+      if (send_icecandidates) {
+        this.signaler.send({candidate}).catch(this.handle_error);
+      } else {
+        icecandidates.push(candidate);
+      }
+    };
+    this.connection.onconnectionstatechange = () => {
+console.log(`Connection state: ${this.connection.connectionState}`);
+      if (this.connection.connectionState === "closed") {
+        this.on_status_changed(CLOSED);
+      }
+    };
+    this.connection.oniceconnectionstatechange = () => {
+console.log("Ice connection state", this.connection.iceConnectionState);
+
+    };
+
+    this.signaler.start()
+    .catch(this.handle_error);
   }
 
   set_channel(channel) {
+    this.log("Assign channel");
     this.channel = channel;
-    this.channel.onopen = () => { this.signaler.stop(); this.log("Channel is open. Signaler stopped!"); this.on_connected(); };
-    this.channel.onclose = () => { this.log("Channel is closed"); };
+    this.channel.onopen = () => { 
+      this.log("Channel is open. Signaler stopped!"); 
+      this.on_status_changed(CONNECTED); 
+      this.signaler.stop(); 
+    };
+    this.channel.onclose = () => { this.log("Channel is closed"); this.on_status_changed(CLOSED); };
     this.channel.onmessage = (evt) => { this.on_message(evt.data); };
-    return this;
   }
 
-  log(message) {
-    if (this.p_log !== null) { this.p_log(message); }
+  call() { this.set_channel(this.connection.createDataChannel("sendChannel")); return this; }
+  answer() { return this; }
+
+  id() {
+    return this.signaler.get_id();
   }
 
-  set_log(cb) {
-    this.p_log = cb;
-    return this;
-  }
-
-  start() {
-    this.set_channel(this.connection.createDataChannel("sendChannel"));
-    return this;
+  send(message) {
+    return this.channel.send(message);
   }
 
   close() {
@@ -105,13 +123,11 @@ class Connection {
     return this;
   }
 
-  send(message) {
-    return this.channel.send(message);
+  handle_error(e) {
+    this.signaler.stop(); this.on_error(e);
   }
-
-  get_id() {
-    return this.signaler.get_id();
-  }
+  log(message) { if (this.p_log !== null) { this.p_log(message); } }
+  set_log(f) { this.p_log = f; return this; }
 }
 
-export { Connection, };
+export { Connection, READY, CONNECTED, CLOSED };
