@@ -5,7 +5,12 @@ const CONNECTED = "connected";
 const CLOSED = "close";
 
 class Connection {
-  constructor(peer_id, on_error, on_status_changed, on_message) {
+  constructor(peer_id, on_error, on_status_changed, on_message, iceServers = null) {
+    // Initialise iceServers - if not provided
+    if (iceServers === null) {
+      iceServers = [ { urls: "stun:stun.services.mozilla.com:3478"} ];
+    }
+
     // Assign callbacks
     this.on_error = on_error;
     this.on_status_changed = on_status_changed;
@@ -18,9 +23,7 @@ class Connection {
     this.channel = null;
 
     // Declare peer connection
-    this.connection = new RTCPeerConnection({
-      iceServers: [{ urls: "stun:stun.services.mozilla.com:3478"}],
-    });
+    this.connection = new RTCPeerConnection({iceServers});
 
     // Declare signaling channel
     this.signaler = new SignalingChannel(this.on_error, peer_id)
@@ -80,14 +83,16 @@ class Connection {
       }
     };
     this.connection.onconnectionstatechange = () => {
-console.log(`Connection state: ${this.connection.connectionState}`);
+      console.log(`Connection state: ${this.connection.connectionState}`);
       if (this.connection.connectionState === "closed") {
         this.on_status_changed(CLOSED);
       }
     };
     this.connection.oniceconnectionstatechange = () => {
-console.log("Ice connection state", this.connection.iceConnectionState);
-
+      console.log("Ice connection state", this.connection.iceConnectionState);
+      if (this.connection.iceConnectionState === "closed") {
+        this.on_status_changed(CLOSED);
+      }
     };
 
     this.signaler.start()

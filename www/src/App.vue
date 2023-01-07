@@ -130,6 +130,7 @@ export default {
           })
           .on_error((e) => {this.on_error("Error in connection", e); })
           .on_message(this.on_message)
+          .ice_servers(null) /* STUN-TURN SERVERS - to populated as required */
           .make();
         if (new URL(window.location.href).searchParams.get("log") !== null) {this.connection.set_log((l) => {this.logs.push(l);});}
       } catch (e) {
