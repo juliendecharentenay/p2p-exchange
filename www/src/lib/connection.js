@@ -50,9 +50,9 @@ class Connection {
           await this.connection.setRemoteDescription(description);
           if (description.type === "offer") {
             await this.connection.setLocalDescription();
-            this.signaler.send({ description: this.connection.localDescription }).catch(this.handle_error);
+            this.signaler.send({ description: this.connection.localDescription }).catch((e) => {this.handle_error(e);});
           }
-          icecandidates.forEach((candidate) => { this.signaler.send({candidate}).catch(this.handle_error);});
+          icecandidates.forEach((candidate) => { this.signaler.send({candidate}).catch((e) => {this.handle_error(e);});});
 
         } else if (candidate) {
           this.log(`Received candidate: ${candidate}`);
@@ -73,11 +73,11 @@ class Connection {
         making_offer = false;
         return this.signaler.send({ description: this.connection.localDescription });
       })
-      .catch(this.handle_error);
+      .catch((e) => {this.handle_error(e);});
     };
     this.connection.onicecandidate = ({candidate}) => { 
       if (send_icecandidates) {
-        this.signaler.send({candidate}).catch(this.handle_error);
+        this.signaler.send({candidate}).catch((e) => {this.handle_error(e);});
       } else {
         icecandidates.push(candidate);
       }
@@ -96,7 +96,7 @@ class Connection {
     };
 
     this.signaler.start()
-    .catch(this.handle_error);
+    .catch((e) => {this.handle_error(e);});
   }
 
   set_channel(channel) {

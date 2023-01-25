@@ -9,6 +9,8 @@ pub struct Answer {
   name: String,
   #[serde(default = "polite")]
   polite: bool,
+  #[serde(default = "crate::make_old_date")]
+  timestamp: chrono::DateTime<chrono::Utc>,
 }
 
 fn polite() -> bool { false }
@@ -16,6 +18,12 @@ fn polite() -> bool { false }
 #[derive(serde::Deserialize)]
 pub struct Info {
   offer_id: Option<String>,
+}
+impl Into<Option<Filter>> for Info {
+  fn into(self) -> Option<Filter> {
+    self.offer_id
+        .map(|v| Filter::OfferIdEqual(v))
+  }
 }
 impl Into<Select> for Info {
   fn into(self) -> Select {
@@ -39,6 +47,7 @@ impl Answer {
   crate::macros::db::update!(Answer, AnswerSql, AppState);
   crate::macros::db::delete!(Answer, AnswerSql, AppState);
   crate::macros::db::list!(Answer, AnswerSql, AppState, Info);
+  crate::macros::db::count!(Answer, AnswerSql, AppState);
 }
 
 #[cfg(feature = "lambda")]
@@ -50,6 +59,7 @@ pub mod apigw {
   crate::macros::lambda::update!(Answer, AnswerSql, AppState);
   crate::macros::lambda::delete!(Answer, AnswerSql, AppState);
   crate::macros::lambda::list!(Answer, AnswerSql, AppState, Info);
+  crate::macros::lambda::count!(Answer, AnswerSql, AppState);
 
   pub async fn handler(request: Request, app_state: AppState) -> Result<lambda_http::Response<String>, Box<dyn std::error::Error>> {
     match request {
@@ -58,6 +68,7 @@ pub mod apigw {
       Request::Get { key } => get(app_state, key).await,
       Request::Update { key, body } => update(app_state, key, body).await,
       Request::Delete { key } => delete(app_state, key).await,
+      Request::Count => count(app_state).await,
       _ => Err(format!("Request is not supported").into()),
     }
   }
@@ -71,12 +82,17 @@ pub mod actix {
   crate::macros::actix::update!(Answer, AnswerSql, AppState);
   crate::macros::actix::delete!(Answer, AnswerSql, AppState);
   crate::macros::actix::list!(Answer, AnswerSql, AppState, Info);
+  crate::macros::actix::count!(Answer, AnswerSql, AppState);
 
   pub fn config(cfg: &mut actix_web::web::ServiceConfig) {
     cfg.service(
        actix_web::web::resource("")
        .route(actix_web::web::get().to(list))
        .route(actix_web::web::post().to(post))
+     )
+     .service(
+       actix_web::web::resource("/count")
+       .route(actix_web::web::get().to(count))
      )
      .service(
        actix_web::web::resource("/{key}")

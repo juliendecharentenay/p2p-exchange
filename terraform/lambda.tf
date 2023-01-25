@@ -117,7 +117,7 @@ resource "aws_iam_role" "lambda" {
  */
 resource "aws_efs_file_system" "lambda" {
   encrypted = true
-  tags = merge(local.all_tags, { Name = "${local.application}-efs-${var.environment}" })
+  tags = merge(local.all_tags, { Name = "${local.application}-efs-${var.environment}-v2" })
 }
 
 resource "aws_efs_mount_target" "lambda" {

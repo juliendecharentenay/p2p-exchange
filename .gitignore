@@ -20,4 +20,6 @@ test.db3
 # Other
 SS
 *.ignore
+*~
+*.swp
 

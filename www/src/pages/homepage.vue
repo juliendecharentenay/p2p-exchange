@@ -20,6 +20,11 @@
         <ButtonComponent @click="$emit('to', 'offer');" :disabled="name.length === 0">Have an Offer</ButtonComponent>
       </div>
     </div>
+    <div class="mt-8 flex flex-col sm:flex-row gap-y-2 gap-x-2 justify-center" v-if="stats !== null">
+      <p class="text-sm md:text-md leading-8 text-gray-600 text-center">
+      {{ stats.offer_count }} offers have been made until now...
+      </p>
+    </div>
   </div>
 </template>
 <script>
@@ -28,6 +33,11 @@ export default {
   name: "HomePage",
   props: ['modelValue'],
   emits: [ 'processing', 'error', 'to', 'start', 'update:modelValue' ],
+  data: function() {
+    return {
+      stats: null,
+    };
+  },
   components: {
     ButtonComponent,
   },
@@ -37,11 +47,22 @@ export default {
       set(v) { this.$emit('update:modelValue', v); }
     },
   },
+  mounted: function() {
+    try {
+      fetch('/api/offer/count')
+      .then((r) => {if (r.ok) { return r.json(); } else { return 'n.a'; }})
+      .then((offer_count) => {
+        this.stats = {offer_count};
+      })
+      .catch((e) => {this.on_error("Error when retrieving stats", e);});
+    } catch(e) {
+      this.on_error("Error in mounted", e);
+    }
+  },
   methods: {
     initiate: function() {
       try {
-console.log("initiate");
-this.$emit('start');
+        this.$emit('start');
       } catch (e) {
         this.on_error("Error during connection initiatlisation", e);
       }

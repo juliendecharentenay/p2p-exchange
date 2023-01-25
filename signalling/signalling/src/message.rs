@@ -7,13 +7,20 @@ pub struct Message {
   id: String,
   originator_id: String,
   message: String,
+  #[serde(default = "crate::make_old_date")]
+  timestamp: chrono::DateTime<chrono::Utc>,
 }
 
 #[derive(serde::Deserialize)]
 pub struct Info {
   originator_id: Option<String>
 }
-
+impl Into<Option<Filter>> for Info {
+  fn into(self) -> Option<Filter> {
+    self.originator_id
+        .map(|v| Filter::OriginatorIdEqual(v))
+  }
+}
 impl Into<Select> for Info {
   fn into(self) -> Select {
     match self.originator_id {

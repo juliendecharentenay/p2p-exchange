@@ -11,19 +11,23 @@ pub enum Request {
   Get    { key: String },
   Update { key: String, body: String },
   Delete { key: String },
+  Count,
 }
 
 impl TryFrom<&lambda_http::Request> for Request {
   type Error = Box<dyn std::error::Error>;
 
   fn try_from(event: &lambda_http::Request) -> Result<Self, Self::Error> {
-    if let RequestContext::ApiGatewayV1(ApiGatewayProxyRequestContext { http_method, .. }) = event.request_context() {
+    if let RequestContext::ApiGatewayV1(ApiGatewayProxyRequestContext { http_method, resource_path, .. }) = event.request_context() {
       let params = event.path_parameters();
       let body = match event.body() {
           lambda_http::Body::Text(body) => Some(body),
           _ => None,
       };
       match http_method {
+        Method::GET if resource_path.unwrap_or_else(|| "".to_string()).ends_with("/count") => {
+          Ok(Request::Count)
+        },
         Method::GET if params.first("key").is_some() => {
           let key = urlencoding::decode(params.first("key").unwrap())?.to_string();
           Ok(Request::Get { key })

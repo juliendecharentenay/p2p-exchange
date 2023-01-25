@@ -1,3 +1,17 @@
+macro_rules! count {
+  ( $class:ident, $class_sql:ident, $data:ident ) => {
+    /// List all
+    pub async fn count(data: $data) -> Result<lambda_http::Response<String>, Box<dyn std::error::Error>> {
+      let count = $class::count(&data).await?;
+      let body = serde_json::to_string(&count)?;
+      let r = lambda_http::Response::builder().status(lambda_http::http::StatusCode::OK).body(body)?;
+      Ok(r)
+    }
+  };
+}
+pub(crate) use count;
+
+
 macro_rules! list {
   ( $class:ident, $class_sql:ident, $data:ident ) => {
     /// List all

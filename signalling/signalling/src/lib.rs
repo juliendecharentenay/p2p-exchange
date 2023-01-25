@@ -16,6 +16,11 @@ pub fn gen_key() -> String {
   .to_uppercase()
 }
 
+use std::ops::Sub;
+pub fn make_old_date() -> chrono::DateTime<chrono::Utc> {
+    chrono::Utc::now().sub(chrono::naive::Days::new(1))
+}
+
 #[derive(derive_builder::Builder)]
 pub struct AppState {
   filename: String,

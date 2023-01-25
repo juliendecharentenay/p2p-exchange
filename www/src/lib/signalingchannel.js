@@ -9,6 +9,8 @@ class SignalingChannel {
     this.peer_id = id;
     this.messages = {};
     this.listen_interval = null;
+    this.listen_interval_step_ms = 3000;
+    this.listen_count = 0;
   }
 
   get_id() { return this.id; }
@@ -103,10 +105,13 @@ class SignalingChannel {
             });
           })
           .catch((e) => { this.stop(); this.p_on_error(e); });
-
+        }
+        this.listen_count += 1;
+        if (this.listen_count * this.listen_interval_step_ms > 5 * 60 * 1000) { // Have been listening for 5 minutes
+          this.stop(); this.p_on_error("5 minutes without response. Connection dropped");
         }
       },
-      3000);
+      this.listen_interval_step_ms);
   }
 }
 

@@ -1,3 +1,15 @@
+macro_rules! count {
+  ( $class:ident, $class_sql:ident, $data:ident ) => {
+    /// List all
+    pub async fn count(data: actix_web::web::Data<$data>) -> impl actix_web::Responder {
+      match $class::count(&data).await {
+        Ok(value) => actix_web::HttpResponse::Ok().json(value),
+        Err(e) => actix_web::HttpResponse::InternalServerError().body(format!("{:#?}", e)),
+      }
+    }
+  };
+}
+pub(crate) use count;
 
 macro_rules! list {
   ( $class:ident, $class_sql:ident, $data:ident ) => {
