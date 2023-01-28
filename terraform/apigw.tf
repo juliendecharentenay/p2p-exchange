@@ -65,6 +65,27 @@ resource "aws_api_gateway_resource" "api_offer_key" {
   path_part   = "{key}"
 }
 
+// Route: /api/count
+resource "aws_api_gateway_resource" "api_count" {
+  rest_api_id = aws_api_gateway_rest_api.app.id
+  parent_id   = aws_api_gateway_resource.api.id
+  path_part   = "count"
+}
+
+// Route: /api/count/offer
+resource "aws_api_gateway_resource" "api_count_offer" {
+  rest_api_id = aws_api_gateway_rest_api.app.id
+  parent_id   = aws_api_gateway_resource.api_count.id
+  path_part   = "offer"
+}
+
+// Route: /api/count/answer
+resource "aws_api_gateway_resource" "api_count_answer" {
+  rest_api_id = aws_api_gateway_rest_api.app.id
+  parent_id   = aws_api_gateway_resource.api_count.id
+  path_part   = "answer"
+}
+
 /*
  * Methods
  */
@@ -137,7 +158,19 @@ locals {
       http_method = "GET"
       resource_id = aws_api_gateway_resource.api_health.id
       request_parameters = {}
-    }
+    },
+
+    { 
+      http_method = "GET"
+      resource_id = aws_api_gateway_resource.api_count_offer.id
+      request_parameters = {}
+    },
+    { 
+      http_method = "GET"
+      resource_id = aws_api_gateway_resource.api_count_answer.id
+      request_parameters = {}
+    },
+
   ]
 }
 

@@ -49,7 +49,7 @@ export default {
   },
   mounted: function() {
     try {
-      fetch('/api/offer/count')
+      fetch('/api/count/offer')
       .then((r) => {if (r.ok) { return r.json(); } else { return 'n.a'; }})
       .then((offer_count) => {
         this.stats = {offer_count};

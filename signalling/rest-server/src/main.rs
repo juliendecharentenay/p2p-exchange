@@ -44,6 +44,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   actix_web::HttpServer::new(move || {
     actix_web::App::new()
       .app_data(app_state.clone())
+      .service(actix_web::web::scope("/api/count/offer").configure(signalling::offer::actix::config_count))
+      .service(actix_web::web::scope("/api/count/answer").configure(signalling::answer::actix::config_count))
       .service(actix_web::web::scope("/api/offer").configure(signalling::offer::actix::config))
       .service(actix_web::web::scope("/api/answer").configure(signalling::answer::actix::config))
       .service(actix_web::web::scope("/api/message").configure(signalling::message::actix::config))

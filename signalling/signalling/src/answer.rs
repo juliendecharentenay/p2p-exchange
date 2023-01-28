@@ -68,7 +68,6 @@ pub mod apigw {
       Request::Get { key } => get(app_state, key).await,
       // Request::Update { key, body } => update(app_state, key, body).await,
       // Request::Delete { key } => delete(app_state, key).await,
-      Request::Count => count(app_state).await,
       _ => Err(format!("Request is not supported").into()),
     }
   }
@@ -84,15 +83,18 @@ pub mod actix {
   crate::macros::actix::list!(Answer, AnswerSql, AppState, Info);
   crate::macros::actix::count!(Answer, AnswerSql, AppState);
 
+  pub fn config_count(cfg: &mut actix_web::web::ServiceConfig) {
+    cfg.service(
+       actix_web::web::resource("")
+       .route(actix_web::web::get().to(count))
+     );
+  }
+
   pub fn config(cfg: &mut actix_web::web::ServiceConfig) {
     cfg.service(
        actix_web::web::resource("")
        .route(actix_web::web::get().to(list))
        .route(actix_web::web::post().to(post))
-     )
-     .service(
-       actix_web::web::resource("/count")
-       .route(actix_web::web::get().to(count))
      )
      .service(
        actix_web::web::resource("/{key}")

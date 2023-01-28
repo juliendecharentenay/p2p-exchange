@@ -39,6 +39,12 @@ async fn handler(event: lambda_http::Request) -> Result<lambda_http::Response<St
       let request = signalling::lambda::Request::try_from(&event)?;
       let r = signalling::message::apigw::handler(request, app_state).await?; Ok(r)
 
+    } else if regex::Regex::new(r"^/api/count/offer")?.is_match(path) {
+      let r = signalling::offer::apigw::count(app_state).await?; Ok(r)
+
+    } else if regex::Regex::new(r"^/api/count/answer")?.is_match(path) {
+      let r = signalling::answer::apigw::count(app_state).await?; Ok(r)
+
     } else if regex::Regex::new(r"^/api/health")?.is_match(path) {
       let r = lambda_http::Response::builder().status(lambda_http::http::StatusCode::OK).body("Ok".to_string())?; Ok(r)
 
