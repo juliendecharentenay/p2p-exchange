@@ -29,7 +29,7 @@ impl Into<Select> for Info {
   fn into(self) -> Select {
     match self.offer_id {
       Some(v) => Filter::OfferIdEqual(v).into(),
-      None => SelectBuilder::default().build(),
+      None => Filter::OfferIdEqual("123456789".to_string()).into(), // Equivalent to a Filter::None (to be implemented in derive_sql)
     }
   }
 }
@@ -66,8 +66,8 @@ pub mod apigw {
       Request::List { query } => list(app_state, Info::from(query)).await,
       Request::Post { body } => post(app_state, body).await,
       Request::Get { key } => get(app_state, key).await,
-      Request::Update { key, body } => update(app_state, key, body).await,
-      Request::Delete { key } => delete(app_state, key).await,
+      // Request::Update { key, body } => update(app_state, key, body).await,
+      // Request::Delete { key } => delete(app_state, key).await,
       Request::Count => count(app_state).await,
       _ => Err(format!("Request is not supported").into()),
     }
@@ -97,8 +97,8 @@ pub mod actix {
      .service(
        actix_web::web::resource("/{key}")
        .route(actix_web::web::get().to(get))
-       .route(actix_web::web::patch().to(update))
-       .route(actix_web::web::delete().to(delete))
+       // .route(actix_web::web::patch().to(update))
+       // .route(actix_web::web::delete().to(delete))
      );
   }
 }

@@ -31,7 +31,7 @@
          :name="name"
          @processing="(e) => {processing = e;}"
          @error="(e) => {error = e;}"
-         @to="(e) => {page = e;}" 
+         @to="(e) => {name = ''; messages = []; page = e;}" 
          @send="send"
          />
 
@@ -41,7 +41,7 @@
          >Home</a>
     </div>
     <div class="absolute bottom-1 left-1 text-xs text-gray-600" v-if="logs.length == 0">
-      Copyright (C) 2022, Julien de Charentenay
+      Copyright (C) 2022-2023, Julien de Charentenay
     </div>
     <div class="absolute bottom-1 right-1 text-xs text-gray-600">
       <div v-for="(line, i) in logs.slice(-10)" :key="i">{{ line }}</div>
@@ -89,7 +89,7 @@ export default {
       processing: null,
       connection: null,
       name: '',
-      messages: [],
+      messages: [], // Array.from({length: 20}, (v, i) => ({from: (i % 2 === 0 ? 'peer' : 'me'), message: `message ${i}`})), // [],
       logs: [],
     };
   },
@@ -146,7 +146,7 @@ export default {
     },
     on_message: function(message) {
       try {
-        this.messages.push({from: 'peer', message});
+        this.messages.unshift({from: 'peer', message});
       } catch(e) {
         this.on_error("Error in on_message", e);
       }
@@ -154,7 +154,7 @@ export default {
     send: function(message) {
       try {
         this.connection.send(message);
-        this.messages.push({from: 'me', message});
+        this.messages.unshift({from: 'me', message});
       } catch (e) {
         this.on_error("Error when sending message", e);
       }

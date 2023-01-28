@@ -36,11 +36,11 @@ pub mod apigw {
 
   pub async fn handler(request: Request, app_state: AppState) -> Result<lambda_http::Response<String>, Box<dyn std::error::Error>> {
     match request {
-      Request::List { ..    } => list(app_state).await,
+      // Request::List { ..    } => list(app_state).await,
       Request::Post { body  } => post(app_state, body).await,
       Request::Get  { key   } => get(app_state, key).await,
-      Request::Update { key, body } => update(app_state, key, body).await,
-      Request::Delete { key } => delete(app_state, key).await,
+      // Request::Update { key, body } => update(app_state, key, body).await,
+      // Request::Delete { key } => delete(app_state, key).await,
       Request::Count => count(app_state).await,
       _ => Err(format!("Request is not supported").into()),
     }
@@ -60,7 +60,7 @@ pub mod actix {
   pub fn config(cfg: &mut actix_web::web::ServiceConfig) {
     cfg.service(
        actix_web::web::resource("")
-       .route(actix_web::web::get().to(list))
+       // .route(actix_web::web::get().to(list))
        .route(actix_web::web::post().to(post))
      )
      .service(
@@ -70,8 +70,8 @@ pub mod actix {
      .service(
        actix_web::web::resource("/{key}")
        .route(actix_web::web::get().to(get))
-       .route(actix_web::web::patch().to(update))
-       .route(actix_web::web::delete().to(delete))
+       // .route(actix_web::web::patch().to(update))
+       // .route(actix_web::web::delete().to(delete))
      );
   }
 }

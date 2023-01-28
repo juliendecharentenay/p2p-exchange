@@ -4,13 +4,12 @@
         <div class="ml-12">(other)</div>
         <div class="mr-12">{{ name }} (you)</div>
     </div>
-    <div class="ml-8 mr-8 grow flex-col gap-y-1 text-gray-600">
+    <div class="pl-8 pr-8 pb-2 grow flex flex-col-reverse overflow-y-auto gap-y-1 text-gray-600 items-stretch">
       <div v-for="(m,index) in messages"
-           :key="index">
-        <div class="flex row"
-             :class="{'justify-start': m.from === 'peer', 'justify-end': m.from === 'me'}">
+           :key="index"
+           class="flex row"
+           :class="{'justify-start': m.from === 'peer', 'justify-end': m.from === 'me'}">
           {{ m.message }}
-        </div>
       </div> 
     </div>
     <div class="mb-12 ml-12 mr-12 flex flex-row justify-end">
@@ -23,16 +22,6 @@
       </div>
     </div>
   </div>
-<!--
-    <div class="flex flex-col content-center">
-    <p class="mt-6 text-lg leading-8 text-gray-600 text-center">
-    Connected...
-    </p>
-    <div class="mt-4 flex flex-row gap-x-2 justify-center">
-      blabla
-    </div>
-  </div>
--->
 </template>
 <script>
 export default {

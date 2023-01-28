@@ -19,7 +19,7 @@ macro_rules! list {
       let db = data.db()?;
       let sql = $class_sql::from_rusqlite(&db)?;
       sql.create_table()?;
-      let filter = Filter::TimestampGreaterEqualThan(chrono::Utc::now() - chrono::Duration::minutes(5));
+      let filter = Filter::TimestampGreaterEqualThan(chrono::Utc::now() - chrono::Duration::minutes(10));
       Ok(sql.select(filter.into())?)
     }
   };
@@ -30,7 +30,7 @@ macro_rules! list {
       let db = data.db()?;
       let sql = $class_sql::from_rusqlite(&db)?;
       sql.create_table()?;
-      let filter = Filter::TimestampGreaterEqualThan(chrono::Utc::now() - chrono::Duration::minutes(5));
+      let filter = Filter::TimestampGreaterEqualThan(chrono::Utc::now() - chrono::Duration::minutes(10));
       let filter = match info.into() {
           Some(i) => Filter::And(Box::new(i), Box::new(filter)),
           None => filter,
@@ -64,7 +64,7 @@ macro_rules! get {
       let db = data.db()?;
       let sql = $class_sql::from_rusqlite(&db)?;
       sql.create_table()?;
-      let filter = Filter::TimestampGreaterEqualThan(chrono::Utc::now() - chrono::Duration::minutes(5));
+      let filter = Filter::TimestampGreaterEqualThan(chrono::Utc::now() - chrono::Duration::minutes(10));
       Ok(sql.select_one(Filter::And(Box::new(Filter::IdEqual(id.clone())), Box::new(filter)).into())?)
     }
   };
@@ -77,7 +77,7 @@ macro_rules! update {
       let db = data.db()?;
       let sql = $class_sql::from_rusqlite(&db)?;
       sql.create_table()?;
-      let filter = Filter::TimestampGreaterEqualThan(chrono::Utc::now() - chrono::Duration::minutes(5));
+      let filter = Filter::TimestampGreaterEqualThan(chrono::Utc::now() - chrono::Duration::minutes(10));
       let previous = sql.select_one(Filter::And(Box::new(Filter::IdEqual(id.clone())), Box::new(filter)).into())?;
       if previous.is_some() {
         let previous = previous.as_ref().unwrap();

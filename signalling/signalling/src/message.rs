@@ -25,7 +25,7 @@ impl Into<Select> for Info {
   fn into(self) -> Select {
     match self.originator_id {
       Some(v) => Filter::OriginatorIdEqual(v).into(),
-      None => SelectBuilder::default().build(),
+      None => Filter::OriginatorIdEqual("123456789".to_string()).into(), // Equivalent to a Filter::None (to be implemented in derive_sql)
     }
   }
 }
