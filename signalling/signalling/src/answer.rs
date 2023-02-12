@@ -29,7 +29,7 @@ impl Into<Select> for Info {
   fn into(self) -> Select {
     match self.offer_id {
       Some(v) => Filter::OfferIdEqual(v).into(),
-      None => Filter::OfferIdEqual("123456789".to_string()).into(), // Equivalent to a Filter::None (to be implemented in derive_sql)
+      None => Filter::None.into(),
     }
   }
 }

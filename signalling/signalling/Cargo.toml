@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 log        = "0.4"
-derive-sql = { version = "0.3", features = [ "chrono" ] }
+derive-sql = { version = "0.4", features = [ "chrono" ] }
 actix-web  = { version = "4", optional = true }
 rusqlite   = { version = "0.28", features = [ "bundled", "chrono" ] }
 # env_logger = "0.9"

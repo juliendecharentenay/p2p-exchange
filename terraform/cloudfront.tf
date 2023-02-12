@@ -57,6 +57,7 @@ resource "aws_cloudfront_distribution" "www" {
     min_ttl     = 0
     default_ttl = 86400    # 24 hours
     max_ttl     = 2592000  # 30 days
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.default.id
   }
 
  // API Gateway origin
@@ -84,7 +85,9 @@ resource "aws_cloudfront_distribution" "www" {
     min_ttl          = 0
     default_ttl      = 0
     max_ttl          = 0
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.default.id
   }
+
 
   tags = local.all_tags
 }
